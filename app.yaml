@@ -3,6 +3,8 @@ command:
   - "app.py"
 
 env:
+  - name: LAKEBASE_URL
+    value: "postgresql://student:npg_l3XFNci6VKUI@ep-quiet-hat-d8z5by3z.database.us-east-2.cloud.databricks.com/databricks_postgres?sslmode=require"
   - name: LAKEBASE_SECRET_SCOPE
     value: "database"
   - name: LAKEBASE_SECRET_KEY
@@ -13,3 +15,4 @@ env:
     value: "massive"
   - name: MASSIVE_SECRET_KEY
     value: "api-key"
+

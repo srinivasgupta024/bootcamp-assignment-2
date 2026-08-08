@@ -23,11 +23,18 @@ resources:
         on_failure:
           - ${workspace.current_user.userName}
 
-      max_concurrent_runs: 1
+      job_clusters:
+        - job_cluster_key: default_cluster
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "i3.xlarge"
+            num_workers: 1
+            data_security_mode: SINGLE_USER
 
       tasks:
         - task_key: ingest_ticker_news_embeddings
-          compute_key: serverless
+          job_cluster_key: default_cluster
+
           notebook_task:
             notebook_path: ../notebooks/ingest_ticker_news_embeddings.py
             base_parameters:
