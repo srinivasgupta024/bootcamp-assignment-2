@@ -1,9 +1,4 @@
-# Databricks Workflow that ingests weather embeddings in 3 sequential steps:
-# 1. Fetch documents from Lakebase and chunk them (uses psycopg2)
-# 2. Generate embeddings with sentence-transformers (uses ML libraries)
-# 3. Sync embeddings back to Lakebase (uses psycopg2)
-#
-# This split avoids the kernel crash caused by loading psycopg2 + PyTorch together.
+# Databricks Workflow that runs notebooks/ingest_weather_embeddings.py on a schedule.
 #
 # Deploy: databricks bundle deploy -t dev
 # Run once manually: databricks bundle run ingest_weather_embeddings_job -t dev
@@ -25,37 +20,22 @@ resources:
 
       max_concurrent_runs: 1
 
+      job_clusters:
+        - job_cluster_key: default_cluster
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "i3.xlarge"
+            num_workers: 2
+            data_security_mode: SINGLE_USER
+
       tasks:
-        # Step 1: Fetch documents from Lakebase and chunk them
-        - task_key: fetch_and_chunk
+        - task_key: ingest_weather_embeddings
+          job_cluster_key: default_cluster
           notebook_task:
-            notebook_path: ../notebooks/fetch_and_chunk_weather_docs
+            notebook_path: ../notebooks/ingest_weather_embeddings.py
             base_parameters:
               weather_docs_table: "weather_documents"
-              weather_chunks_table: "weather_chunks"
+              weather_embeddings_table: "weather_embeddings"
+              embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
               chunk_size: "800"
               chunk_overlap: "100"
-
-        # Step 2: Generate embeddings from chunks (depends on step 1)
-        - task_key: generate_embeddings
-          depends_on:
-            - task_key: fetch_and_chunk
-          notebook_task:
-            notebook_path: ../notebooks/generate_weather_embeddings
-            base_parameters:
-              weather_chunks_table: "weather_chunks"
-              weather_embeddings_table: "weather_embeddings_delta"
-              embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
-              batch_size: "64"
-
-        # Step 3: Sync embeddings back to Lakebase (depends on step 2)
-        - task_key: sync_to_lakebase
-          depends_on:
-            - task_key: generate_embeddings
-          notebook_task:
-            notebook_path: ../notebooks/sync_embeddings_to_lakebase
-            base_parameters:
-              weather_embeddings_table: "weather_embeddings_delta"
-              lakebase_embeddings_table: "weather_embeddings"
-              weather_docs_table: "weather_documents"
-              batch_size: "100"
