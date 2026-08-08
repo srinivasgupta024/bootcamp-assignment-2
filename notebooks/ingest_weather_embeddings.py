@@ -13,10 +13,39 @@ Or imported and called from Flask:
     run_embedding_pipeline()
 """
 
+import subprocess
+import sys
+
+# ── Install required packages if missing (works in Databricks & locally) ─────
+_REQUIRED = [
+    "sentence-transformers",
+    "psycopg2-binary",
+    "pandas",
+    "databricks-sdk>=0.118.0",
+]
+
+def _ensure_packages(packages: list[str]) -> None:
+    """Install packages only when they are not already importable."""
+    missing = []
+    for pkg in packages:
+        # Strip version specifiers for the import check
+        mod = pkg.split(">=")[0].split("==")[0].replace("-", "_")
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(pkg)
+    if missing:
+        print(f"[setup] pip install: {missing}")
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "-q"] + missing
+        )
+
+_ensure_packages(_REQUIRED)
+
+# ── Standard library & third-party imports ────────────────────────────────────
 import base64
 import json
 import os
-import sys
 from urllib.parse import urlparse
 
 import pandas as pd
