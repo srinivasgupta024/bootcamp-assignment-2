@@ -17,18 +17,20 @@ import subprocess
 import sys
 
 # ── Install required packages if missing (works in Databricks & locally) ─────
+# NOTE: psycopg2 is intentionally NOT pip-installed here.
+#       Databricks clusters ship their own psycopg2 build; installing
+#       psycopg2-binary on top causes library conflicts.  We just import it
+#       directly — if it's truly missing, a clear ImportError is raised below.
 _REQUIRED = [
     "sentence-transformers",
-    "psycopg2-binary",
     "pandas",
     "databricks-sdk>=0.118.0",
 ]
 
 def _ensure_packages(packages: list[str]) -> None:
-    """Install packages only when they are not already importable."""
+    """pip-install packages that are not already importable."""
     missing = []
     for pkg in packages:
-        # Strip version specifiers for the import check
         mod = pkg.split(">=")[0].split("==")[0].replace("-", "_")
         try:
             __import__(mod)
@@ -42,6 +44,17 @@ def _ensure_packages(packages: list[str]) -> None:
 
 _ensure_packages(_REQUIRED)
 
+# psycopg2 is expected to already be present (Databricks bundles it;
+# local dev: pip install psycopg2-binary in your venv manually).
+try:
+    import psycopg2
+    from psycopg2.extras import execute_values
+except ImportError as _e:
+    raise ImportError(
+        "psycopg2 not found. For local development run: "
+        "pip install psycopg2-binary"
+    ) from _e
+
 # ── Standard library & third-party imports ────────────────────────────────────
 import base64
 import json
@@ -49,8 +62,6 @@ import os
 from urllib.parse import urlparse
 
 import pandas as pd
-import psycopg2
-from psycopg2.extras import execute_values
 from sentence_transformers import SentenceTransformer
 
 # ── Allow running from the repo root or from within notebooks/ ──────────────
