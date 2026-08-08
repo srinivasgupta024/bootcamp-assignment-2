@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # MAGIC %md
 # MAGIC # Ingest Weather Documents -> Vector Embeddings (Lakebase)
 # MAGIC
@@ -233,6 +237,7 @@ finally:
 # COMMAND ----------
 
 # DBTITLE 1, Chunk & Compute Embeddings using SentenceTransformer
+import json
 from sentence_transformers import SentenceTransformer
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
