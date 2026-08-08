@@ -269,7 +269,8 @@ if len(docs_df) > 0:
         embeddings = model.encode(chunks, show_progress_bar=False)
         for c_idx, (chunk_str, emb) in enumerate(zip(chunks, embeddings)):
             emb_list = emb.tolist() if hasattr(emb, "tolist") else list(emb)
-            vector_str = '{' + ','.join(str(float(x)) for x in emb_list) + '}'
+            vector_str = json.dumps(emb_list)
+
             chunk_rows.append({
                 "id": f"{doc_id}_{c_idx}",
                 "document_id": doc_id,
