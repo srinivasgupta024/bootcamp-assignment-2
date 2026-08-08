@@ -20,10 +20,22 @@ except NameError:
 
 # COMMAND ----------
 
-# DBTITLE 1, Notebook Widgets & Configuration
+# DBTITLE 1, Configure HuggingFace Cache & Environment Threads
+import os
+
+# Prevent PyTorch / OpenMP multi-threading SIGABRT crashes on Databricks driver node
+os.environ["HF_HOME"] = "/tmp/.cache/huggingface"
+os.environ["TRANSFORMERS_CACHE"] = "/tmp/.cache/huggingface"
+os.environ["HF_HUB_CACHE"] = "/tmp/.cache/huggingface"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import json
 import logging
-import os
 import sys
 import time
 import base64
@@ -78,7 +90,6 @@ def get_lakebase_connection():
             logger.warning(f"Databricks secret lookup failed: {err}")
 
     if not url or "<your-lakebase-host>" in url:
-        # Fallback to hardcoded database connection if secret holds placeholder
         url = "postgresql://student:npg_l3XFNci6VKUI@ep-quiet-hat-d8z5by3z.database.us-east-2.cloud.databricks.com/databricks_postgres?sslmode=require"
 
     parsed = urlparse(url)
@@ -134,7 +145,7 @@ ensure_tables()
 
 # COMMAND ----------
 
-# DBTITLE 1, Harvest New Weather Records from NWS API if needed
+# DBTITLE 1, Harvest New Weather Records from NWS API
 try:
     from weather_client import WeatherClient
     client = WeatherClient()
@@ -192,7 +203,7 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 
 def run_embedding_pipeline():
     logger.info(f"Loading transformer model: {EMBEDDING_MODEL_NAME}...")
-    model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    model = SentenceTransformer(EMBEDDING_MODEL_NAME, cache_folder="/tmp/.cache/huggingface")
 
     with get_lakebase_connection() as conn:
         with conn.cursor() as cur:
@@ -225,8 +236,10 @@ def run_embedding_pipeline():
             for idx, (chunk_str, emb) in enumerate(zip(chunks, embeddings)):
                 emb_list = emb.tolist() if hasattr(emb, "tolist") else list(emb)
                 chunk_id = f"{doc_id}_{idx}"
+                # Format embedding as PostgreSQL array string for %s::vector cast
+                vector_str = '{' + ','.join(str(float(x)) for x in emb_list) + '}'
                 records_to_insert.append((
-                    chunk_id, doc_id, idx, chunk_str, json.dumps(emb_list), EMBEDDING_MODEL_NAME
+                    chunk_id, doc_id, idx, chunk_str, vector_str, EMBEDDING_MODEL_NAME
                 ))
 
             if len(records_to_insert) >= BATCH_SIZE:
@@ -262,4 +275,9 @@ def run_embedding_pipeline():
 
         logger.info(f"Embeddings pipeline finished successfully. Total chunk embeddings: {total_chunks}")
 
+# COMMAND ----------
+
+# DBTITLE 1, Run the pipeline
+start_time = time.time()
 run_embedding_pipeline()
+logger.info(f"Pipeline finished in {time.time() - start_time:.2f} seconds.")
