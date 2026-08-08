@@ -30,7 +30,8 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -q sentence-transformers trafilatura requests
+# DBTITLE 1,Install dependencies
+# MAGIC %uv pip install sentence-transformers trafilatura requests psycopg2-binary
 
 # COMMAND ----------
 
