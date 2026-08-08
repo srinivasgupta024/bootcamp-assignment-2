@@ -78,7 +78,14 @@ from urllib.parse import urlparse
 from databricks.sdk import WorkspaceClient
 
 # Add parent directory to sys.path so helper modules can be imported
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+try:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    current_dir = os.getcwd()
+
+sys.path.insert(0, os.path.abspath(os.path.join(current_dir, "..")))
+sys.path.insert(0, current_dir)
+
 
 def get_lakebase_url() -> str:
     url = os.environ.get("LAKEBASE_URL")
