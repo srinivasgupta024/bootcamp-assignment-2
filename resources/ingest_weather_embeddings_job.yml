@@ -1,0 +1,40 @@
+# Databricks Workflow that runs notebooks/ingest_weather_embeddings.py on a schedule.
+# Deploy: databricks bundle deploy -t dev
+# Run once manually: databricks bundle run ingest_weather_embeddings_job -t dev
+
+resources:
+  jobs:
+    ingest_weather_embeddings_job:
+      name: "[${bundle.target}] Ingest Weather Vector Embeddings"
+
+      # Runs every 30 minutes to re-sync weather alerts and refresh vector embeddings
+      schedule:
+        quartz_cron_expression: "0 */30 * * * ?"
+        timezone_id: "UTC"
+        pause_status: UNPAUSED
+
+      email_notifications:
+        on_failure:
+          - ${workspace.current_user.userName}
+
+      max_concurrent_runs: 1
+
+      job_clusters:
+        - job_cluster_key: default_cluster
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "i3.xlarge"
+            num_workers: 1
+            data_security_mode: SINGLE_USER
+
+      tasks:
+        - task_key: ingest_weather_embeddings
+          job_cluster_key: default_cluster
+          notebook_task:
+            notebook_path: ../notebooks/ingest_weather_embeddings.py
+            base_parameters:
+              weather_docs_table: "weather_documents"
+              weather_embeddings_table: "weather_embeddings"
+              embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+              chunk_size: "800"
+              chunk_overlap: "100"
