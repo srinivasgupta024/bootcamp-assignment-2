@@ -2,268 +2,1055 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Massive Stock Watchlist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Intelligence — Vector Search & RAG Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f4f6fb;
-      --card-bg: #ffffff;
-      --border: #e4e7ee;
-      --text: #1f2430;
-      --muted: #6b7280;
-      --accent: #4f46e5;
-      --accent-hover: #4338ca;
-      --danger: #dc2626;
-      --danger-hover: #b91c1c;
-      --radius: 10px;
+      --bg-dark: #090d16;
+      --bg-surface: #111827;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(56, 189, 248, 0.3);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-blue: #38bdf8;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #a855f7;
+      --accent-green: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-red: #f87171;
+      --gradient-primary: linear-gradient(135deg, #0284c7 0%, #7e22ce 100%);
+      --gradient-secondary: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+      --gradient-card: linear-gradient(180deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
+      --radius-xl: 20px;
+      --radius-lg: 14px;
+      --radius-md: 10px;
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      max-width: 640px;
-      margin: 48px auto;
-      padding: 0 20px;
-      color: var(--text);
-      background: var(--bg);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 15% 15%, rgba(56, 189, 248, 0.1) 0px, transparent 50%),
+        radial-gradient(at 85% 85%, rgba(168, 85, 247, 0.1) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(52, 211, 153, 0.05) 0px, transparent 60%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding-bottom: 60px;
     }
 
-    h1 {
+    /* Sticky Navigation Bar */
+    header {
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 14px 32px;
+    }
+
+    .nav-container {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--gradient-primary);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 4px;
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.35);
     }
 
-    .hint {
-      color: var(--muted);
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 21px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #ffffff 0%, #93c5fd 50%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-pill {
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: var(--accent-green);
+      padding: 6px 16px;
+      border-radius: 20px;
       font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.2); }
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1320px;
+      margin: 28px auto 0;
+      padding: 0 24px;
+    }
+
+    /* System Metrics Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--gradient-card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      opacity: 0.7;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 30px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--accent-blue);
       margin-top: 4px;
-      line-height: 1.5;
+    }
+
+    /* Navigation Tabs */
+    .tab-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-blue);
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.3);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
+    }
+
+    /* Card Panels */
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
     }
 
     .card {
       background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      margin-top: 24px;
-      box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      backdrop-filter: blur(16px);
+      margin-bottom: 28px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
     }
 
-    label {
-      display: block;
-      margin-top: 16px;
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--text);
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    label:first-child { margin-top: 0; }
 
-    input[type="text"] {
-      width: 100%;
-      padding: 10px 12px;
-      margin-top: 6px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
+    .section-desc {
+      color: var(--text-muted);
       font-size: 14px;
-      transition: border-color 0.15s ease;
-    }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+      margin-bottom: 24px;
     }
 
-    button {
-      margin-top: 18px;
-      padding: 10px 18px;
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      background: var(--accent);
+    /* Form Inputs & Controls */
+    .search-box-wrapper {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .input-field {
+      flex: 1;
+      background: rgba(9, 13, 22, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
       color: #fff;
-      font-size: 14px;
+      font-size: 15px;
+      transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .btn-primary {
+      background: var(--gradient-primary);
+      border: none;
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-size: 15px;
       font-weight: 600;
-      transition: background 0.15s ease;
+      padding: 14px 28px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(2, 132, 199, 0.35);
     }
-    button:hover { background: var(--accent-hover); }
-    button:active { transform: translateY(1px); }
 
-    #result {
-      margin-top: 16px;
-      white-space: pre-wrap;
-      background: #f6f6f6;
-      padding: 12px 14px;
-      border-radius: 8px;
-      min-height: 20px;
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(2, 132, 199, 0.5);
+    }
+
+    .btn-success {
+      background: var(--gradient-secondary);
+      box-shadow: 0 4px 20px rgba(5, 150, 105, 0.35);
+    }
+
+    .btn-success:hover {
+      box-shadow: 0 6px 24px rgba(5, 150, 105, 0.5);
+    }
+
+    /* Quick Query Badges */
+    .suggestion-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 6px 14px;
       font-size: 13px;
-      color: var(--muted);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
-    #result:empty { display: none; }
 
+    .pill:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    /* Control Settings Bar */
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    select.input-field {
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+
+    .toggle-switch {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .toggle-switch input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-purple);
+      cursor: pointer;
+    }
+
+    /* RAG Summary Box */
+    .rag-box {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(56, 189, 248, 0.15) 100%);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin-top: 24px;
+      display: none;
+      box-shadow: 0 4px 20px rgba(168, 85, 247, 0.15);
+    }
+
+    .rag-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      color: var(--accent-purple);
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .rag-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #f1f5f9;
+    }
+
+    /* Results Grid & Cards */
+    .results-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .result-card {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .result-card:hover {
+      border-color: var(--card-border-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .result-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .result-tags {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-location { background: rgba(56, 189, 248, 0.15); color: var(--accent-blue); border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-alert { background: rgba(248, 113, 113, 0.15); color: var(--accent-red); border: 1px solid rgba(248, 113, 113, 0.3); }
+    .badge-forecast { background: rgba(52, 211, 153, 0.15); color: var(--accent-green); border: 1px solid rgba(52, 211, 153, 0.3); }
+
+    .score-meter {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .score-bar-bg {
+      width: 90px;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    .result-headline {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .result-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border-left: 3px solid var(--accent-blue);
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Tables */
     table {
       width: 100%;
-      margin-top: 0;
       border-collapse: collapse;
+      margin-top: 16px;
     }
+
     th, td {
+      padding: 14px 16px;
       text-align: left;
-      padding: 10px 8px;
-      border-bottom: 1px solid var(--border);
-      font-size: 14px;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 13px;
     }
+
     th {
-      font-size: 12px;
-      color: var(--muted);
+      color: var(--text-muted);
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.03em;
-      font-weight: 600;
-    }
-    tbody tr:hover { background: #fafbfe; }
-    tbody tr:last-child td { border-bottom: none; }
-
-    .empty-row td {
-      color: var(--muted);
-      text-align: center;
-      padding: 20px 8px;
+      font-size: 11px;
+      letter-spacing: 0.06em;
     }
 
-    .delete-btn {
-      margin-top: 0;
-      padding: 6px 12px;
-      font-size: 12px;
-      font-weight: 600;
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Modal Backdrop & Dialog */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-dialog {
+      background: var(--bg-surface);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl);
+      max-width: 800px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 16px;
+    }
+
+    .modal-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .modal-close {
       background: transparent;
-      color: var(--danger);
-      border: 1px solid var(--danger);
+      border: none;
+      color: var(--text-muted);
+      font-size: 24px;
+      cursor: pointer;
     }
-    .delete-btn:hover { background: var(--danger); color: #fff; }
-    .delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .modal-close:hover { color: #fff; }
   </style>
 </head>
 <body>
-  <h1>Stock Watchlist</h1>
-  <p class="hint">Enter a single ticker symbol. This sends exactly ONE call to the Massive API to fetch the latest price, then adds it to your watchlist.</p>
 
-  <div class="card">
-    <form id="stock-form">
-      <label for="symbol">Ticker symbol</label>
-      <input type="text" id="symbol" name="symbol" placeholder="AAPL" required>
-      <button type="submit">Add to watchlist</button>
-    </form>
+  <!-- Header -->
+  <header>
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-icon">🌤️</div>
+        <div>
+          <div class="brand-title">Vector Weather Retrieval Service</div>
+          <div class="brand-sub">
+            <span>Databricks Lakebase (Postgres + pgvector)</span>
+            <span>•</span>
+            <span style="color: var(--accent-purple);">all-MiniLM-L6-v2</span>
+          </div>
+        </div>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        Lakebase Active
+      </div>
+    </div>
+  </header>
 
-    <div id="result"></div>
-  </div>
+  <main>
+    <!-- System Metrics Header -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Weather Documents</div>
+        <div class="stat-value" id="stat-docs">--</div>
+        <div class="stat-sub">Ingested from NWS API</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vector Embeddings</div>
+        <div class="stat-value" id="stat-embeddings">--</div>
+        <div class="stat-sub">384-d pgvector HNSW Index</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Embedding Model</div>
+        <div class="stat-value" style="font-size: 18px; margin-top: 6px;">all-MiniLM-L6-v2</div>
+        <div class="stat-sub">Cosine Distance (1 - <=> )</div>
+      </div>
+    </div>
 
-  <div class="card">
-    <table id="watchlist-table">
-      <thead>
-        <tr>
-          <th>Symbol</th>
-          <th>Email</th>
-          <th>Latest price</th>
-          <th>Updated</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="watchlist-body"></tbody>
-    </table>
+    <!-- Navigation Tabs Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('tab-search')">
+        <span>🔍</span> Semantic Search & RAG
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-sync')">
+        <span>⚡</span> NWS Ingestion Pipeline
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-docs')">
+        <span>🗄️</span> Raw Document Store
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-vectors')">
+        <span>📊</span> Vector Embeddings Inspector
+      </button>
+    </div>
+
+    <!-- Tab 1: Semantic Search & RAG -->
+    <div id="tab-search" class="panel active">
+      <div class="card">
+        <div class="section-title">
+          <span>🔎</span> Semantic Weather Retrieval & RAG
+        </div>
+        <div class="section-desc">
+          Query Lakebase using dense vector similarity over active NWS weather alerts and multi-day forecast narratives.
+        </div>
+
+        <div class="search-box-wrapper">
+          <input type="text" id="search-query" class="input-field" placeholder="e.g. flash flood risk near rivers, extreme heat warning, freezing snow..." value="flash flood risk near rivers">
+          <button id="search-btn" class="btn-primary">
+            <span>Search Vectors</span>
+          </button>
+        </div>
+
+        <!-- Quick Query Suggestion Pills -->
+        <div class="suggestion-pills">
+          <span class="pill" onclick="setQuery('flash flood risk near rivers')">🌊 Flash Flood Risk</span>
+          <span class="pill" onclick="setQuery('extreme heat warning and heat advisories')">🔥 Extreme Heat Warning</span>
+          <span class="pill" onclick="setQuery('heavy snowfall and freezing temperatures')">❄️ Heavy Snowfall & Freezing</span>
+          <span class="pill" onclick="setQuery('severe thunderstorm and high gusty winds')">⛈️ Severe Thunderstorm</span>
+          <span class="pill" onclick="setQuery('coastal hurricane and tropical storm')">🌀 Coastal Storm</span>
+        </div>
+
+        <!-- Controls Row -->
+        <div class="controls-row">
+          <div class="control-group">
+            <label for="top-k">Top Results (K):</label>
+            <select id="top-k" class="input-field">
+              <option value="3">3</option>
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="source-type">Source Filter:</label>
+            <select id="source-type" class="input-field">
+              <option value="">All Data Sources</option>
+              <option value="alert">Alerts Only</option>
+              <option value="forecast">Forecasts Only</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label class="toggle-switch">
+              <input type="checkbox" id="rag-toggle" checked>
+              <span>Generate AI RAG Summary</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- RAG Summary Card -->
+        <div id="rag-box" class="rag-box">
+          <div class="rag-header">
+            <span>🤖</span> AI RAG Context Summary
+          </div>
+          <div class="rag-text" id="rag-text"></div>
+        </div>
+
+        <!-- Search Results Grid -->
+        <div id="results-container" class="results-grid"></div>
+      </div>
+    </div>
+
+    <!-- Tab 2: NWS Ingestion Pipeline -->
+    <div id="tab-sync" class="panel">
+      <div class="card">
+        <div class="section-title">
+          <span>⚡</span> Live NWS Ingestion & Vector Pipeline Trigger
+        </div>
+        <div class="section-desc">
+          Harvest unstructured narrative text from <code>api.weather.gov</code> for active alerts and forecast discussions, normalize records, and generate vector embeddings.
+        </div>
+
+        <div class="search-box-wrapper">
+          <input type="text" id="sync-locations" class="input-field" value="IL, TX, CA, NY, Chicago, IL, Austin, TX">
+          <button id="sync-btn" class="btn-primary btn-success">
+            <span>Harvest & Sync Now</span>
+          </button>
+        </div>
+        <div class="section-desc" style="font-size: 12px; margin-top: -8px;">
+          Accepts State codes (e.g. <code>IL, TX, CA</code>), City names (<code>Chicago, IL</code>), or Lat/Lon coordinates (<code>41.8781,-87.6298</code>).
+        </div>
+        <div id="sync-status" style="margin-top: 16px; font-size: 14px;"></div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Raw Document Store -->
+    <div id="tab-docs" class="panel">
+      <div class="card">
+        <div class="section-title">
+          <span>🗄️</span> Lakebase Document Inspector
+        </div>
+        <div class="section-desc">
+          Inspect raw <code>weather_documents</code> records stored in PostgreSQL Lakebase.
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Location</th>
+              <th>Source Type</th>
+              <th>Headline</th>
+              <th>Narrative Preview</th>
+              <th>Synced At</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="docs-table-body">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading Lakebase records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab 4: Vector Embeddings Inspector -->
+    <div id="tab-vectors" class="panel">
+      <div class="card">
+        <div class="section-title">
+          <span>📊</span> Lakebase Vector Embeddings Store
+        </div>
+        <div class="section-desc">
+          Inspect 384-dimensional chunk embeddings stored in <code>weather_embeddings</code> table with pgvector indexing.
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Embedding ID</th>
+              <th>Document ID</th>
+              <th>Chunk Index</th>
+              <th>Chunk Text</th>
+              <th>Model</th>
+              <th>Created At</th>
+            </tr>
+          </thead>
+          <tbody id="vectors-table-body">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading vector embeddings...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Detail Modal -->
+  <div id="detail-modal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-headline">Document Details</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
   </div>
 
   <script>
-    const form = document.getElementById("stock-form");
-    const resultEl = document.getElementById("result");
-    const watchlistBody = document.getElementById("watchlist-body");
+    const searchBtn = document.getElementById("search-btn");
+    const searchQuery = document.getElementById("search-query");
+    const topKSelect = document.getElementById("top-k");
+    const sourceTypeSelect = document.getElementById("source-type");
+    const ragToggle = document.getElementById("rag-toggle");
+    const resultsContainer = document.getElementById("results-container");
+    const ragBox = document.getElementById("rag-box");
+    const ragText = document.getElementById("rag-text");
+    const syncBtn = document.getElementById("sync-btn");
+    const syncLocations = document.getElementById("sync-locations");
+    const syncStatus = document.getElementById("sync-status");
 
-    async function loadWatchlist() {
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.getElementById(tabId).classList.add('active');
+
+      if (tabId === 'tab-docs') loadDocuments();
+      if (tabId === 'tab-vectors') loadEmbeddings();
+    }
+
+    function setQuery(queryText) {
+      searchQuery.value = queryText;
+      switchTab('tab-search');
+      executeVectorSearch();
+    }
+
+    async function loadStats() {
       try {
-        const resp = await fetch("/watchlist");
+        const resp = await fetch("/weather/stats");
         const data = await resp.json();
-        if (!resp.ok) {
-          resultEl.textContent = "Error loading watchlist: " + (data.error || resp.statusText);
-          return;
-        }
-        watchlistBody.innerHTML = "";
-
-        if (!data.length) {
-          const emptyTr = document.createElement("tr");
-          emptyTr.className = "empty-row";
-          emptyTr.innerHTML = `<td colspan="5">Your watchlist is empty. Add a ticker above to get started.</td>`;
-          watchlistBody.appendChild(emptyTr);
-          return;
-        }
-
-        data.forEach((row) => {
-          const tr = document.createElement("tr");
-          const price = row.latest_price !== null && row.latest_price !== undefined
-            ? Number(row.latest_price).toFixed(2)
-            : "-";
-          const updated = row.updated_at ? new Date(row.updated_at).toLocaleString() : "-";
-          tr.innerHTML = `
-            <td>${row.symbol}</td>
-            <td>${row.email || "-"}</td>
-            <td>${price}</td>
-            <td>${updated}</td>
-            <td><button type="button" class="delete-btn" data-symbol="${row.symbol}">Remove</button></td>
-          `;
-          watchlistBody.appendChild(tr);
-        });
+        document.getElementById("stat-docs").textContent = data.documents || 0;
+        document.getElementById("stat-embeddings").textContent = data.embeddings || 0;
       } catch (err) {
-        resultEl.textContent = "Failed to load watchlist: " + err;
+        console.error("Stats load failed:", err);
       }
     }
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const symbol = document.getElementById("symbol").value;
-      resultEl.textContent = "Adding to watchlist...";
+    async function loadDocuments() {
+      try {
+        const resp = await fetch("/weather/documents?limit=25");
+        const data = await resp.json();
+        const tbody = document.getElementById("docs-table-body");
+        tbody.innerHTML = "";
+        if (!data || !data.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No documents found. Trigger NWS sync first.</td></tr>';
+          return;
+        }
+        data.forEach(row => {
+          const tr = document.createElement("tr");
+          const typeBadge = row.source_type === 'alert' 
+            ? '<span class="badge badge-alert">Alert</span>'
+            : '<span class="badge badge-forecast">Forecast</span>';
+          const syncedDate = row.synced_at ? new Date(row.synced_at).toLocaleTimeString() : '-';
+          const narrativeSnippet = (row.narrative_text || '').substring(0, 90) + '...';
+
+          tr.innerHTML = `
+            <td><strong>${row.location || '-'}</strong></td>
+            <td>${typeBadge}</td>
+            <td>${row.headline || 'N/A'}</td>
+            <td>${narrativeSnippet}</td>
+            <td>${syncedDate}</td>
+            <td><button class="pill" onclick="showDocModalById('${row.id}')">View Details</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Docs load failed:", err);
+      }
+    }
+
+    async function loadEmbeddings() {
+      try {
+        const resp = await fetch("/weather/embeddings?limit=25");
+        const data = await resp.json();
+        const tbody = document.getElementById("vectors-table-body");
+        tbody.innerHTML = "";
+        if (!data || !data.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No embeddings found. Trigger NWS sync to compute vectors.</td></tr>';
+          return;
+        }
+        data.forEach(row => {
+          const tr = document.createElement("tr");
+          const createdDate = row.created_at ? new Date(row.created_at).toLocaleTimeString() : '-';
+          const chunkSnippet = (row.chunk_text || '').substring(0, 90) + '...';
+
+          tr.innerHTML = `
+            <td><code>${row.id || '-'}</code></td>
+            <td><code>${row.document_id || '-'}</code></td>
+            <td><strong>#${row.chunk_index}</strong></td>
+            <td>${chunkSnippet}</td>
+            <td><span class="badge badge-location">${row.model_name || 'all-MiniLM-L6-v2'}</span></td>
+            <td>${createdDate}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Embeddings load failed:", err);
+      }
+    }
+
+    async function executeVectorSearch() {
+      const query = searchQuery.value.trim();
+      if (!query) return;
+
+      searchBtn.disabled = true;
+      searchBtn.innerHTML = '<span class="loading-spinner"></span> Searching...';
+      resultsContainer.innerHTML = '';
+      ragBox.style.display = 'none';
 
       try {
-        const resp = await fetch("/watchlist", {
+        const resp = await fetch("/weather/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symbol }),
+          body: JSON.stringify({
+            query: query,
+            top_k: parseInt(topKSelect.value),
+            source_type: sourceTypeSelect.value || null,
+            rag: ragToggle.checked
+          })
         });
+
         const data = await resp.json();
+        searchBtn.disabled = false;
+        searchBtn.innerHTML = '<span>Search Vectors</span>';
+
         if (!resp.ok) {
-          resultEl.textContent = "Error: " + (data.error || resp.statusText);
+          resultsContainer.innerHTML = `<div style="color: var(--accent-red); padding: 16px;">Error: ${data.error || 'Search failed'}</div>`;
           return;
         }
-        resultEl.textContent = "Added " + data.symbol + " at price " + data.latest_price;
-        document.getElementById("symbol").value = "";
-        loadWatchlist();
+
+        if (data.rag_summary) {
+          ragText.textContent = data.rag_summary;
+          ragBox.style.display = 'block';
+        }
+
+        if (!data.results || !data.results.length) {
+          resultsContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 32px;">No matching weather vectors found. Try running NWS Ingestion to harvest more alerts.</div>';
+          return;
+        }
+
+        data.results.forEach(res => {
+          const card = document.createElement("div");
+          card.className = "result-card";
+
+          const simScore = Math.round((res.similarity || 0) * 100);
+          const typeBadge = res.source_type === 'alert' 
+            ? '<span class="badge badge-alert">Alert</span>'
+            : '<span class="badge badge-forecast">Forecast</span>';
+
+          const scoreColor = simScore >= 70 ? 'var(--accent-green)' : (simScore >= 40 ? 'var(--accent-blue)' : 'var(--accent-amber)');
+
+          card.innerHTML = `
+            <div class="result-meta">
+              <div class="result-tags">
+                <span class="badge badge-location">📍 ${res.location}</span>
+                ${typeBadge}
+              </div>
+              <div class="score-meter" style="color: ${scoreColor};">
+                <span>Similarity ${simScore}%</span>
+                <div class="score-bar-bg">
+                  <div class="score-bar-fill" style="width: ${simScore}%; background: ${scoreColor};"></div>
+                </div>
+              </div>
+            </div>
+            <div class="result-headline">${res.headline || 'Weather Report'}</div>
+            <div class="result-text">${res.chunk_text}</div>
+          `;
+
+          card.onclick = () => showDocModal(res);
+          resultsContainer.appendChild(card);
+        });
+
       } catch (err) {
-        resultEl.textContent = "Request failed: " + err;
+        searchBtn.disabled = false;
+        searchBtn.innerHTML = '<span>Search Vectors</span>';
+        resultsContainer.innerHTML = `<div style="color: var(--accent-red); padding: 16px;">Error executing search: ${err}</div>`;
       }
-    });
+    }
 
-    watchlistBody.addEventListener("click", async (e) => {
-      const btn = e.target.closest(".delete-btn");
-      if (!btn) return;
-
-      const symbol = btn.dataset.symbol;
-      btn.disabled = true;
-      resultEl.textContent = "Removing " + symbol + "...";
+    syncBtn.addEventListener("click", async () => {
+      const locations = syncLocations.value.trim();
+      syncBtn.disabled = true;
+      syncBtn.innerHTML = '<span class="loading-spinner"></span> Ingesting NWS Data...';
+      syncStatus.innerHTML = '<span style="color: var(--accent-blue);">Harvesting active alerts & forecast discussions from api.weather.gov...</span>';
 
       try {
-        const resp = await fetch(`/watchlist/${encodeURIComponent(symbol)}`, {
-          method: "DELETE",
+        const resp = await fetch("/weather/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locations: locations })
         });
         const data = await resp.json();
-        if (!resp.ok) {
-          resultEl.textContent = "Error: " + (data.error || resp.statusText);
-          btn.disabled = false;
-          return;
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = '<span>Harvest & Sync Now</span>';
+
+        if (resp.ok) {
+          syncStatus.innerHTML = `<span style="color: var(--accent-green);">✅ Successfully harvested and synced ${data.synced} weather documents & computed vector embeddings!</span>`;
+          loadStats();
+          if (document.getElementById('tab-docs').classList.contains('active')) loadDocuments();
+          if (document.getElementById('tab-vectors').classList.contains('active')) loadEmbeddings();
+        } else {
+          syncStatus.innerHTML = `<span style="color: var(--accent-red);">❌ Sync failed: ${data.error}</span>`;
         }
-        resultEl.textContent = "Removed " + data.symbol + " from your watchlist.";
-        loadWatchlist();
       } catch (err) {
-        resultEl.textContent = "Request failed: " + err;
-        btn.disabled = false;
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = '<span>Harvest & Sync Now</span>';
+        syncStatus.innerHTML = `<span style="color: var(--accent-red);">❌ Sync error: ${err}</span>`;
       }
     });
 
-    loadWatchlist();
+    function showDocModal(doc) {
+      document.getElementById("modal-headline").textContent = doc.headline || doc.location || "Document Details";
+      document.getElementById("modal-body").innerHTML = `
+        <div style="margin-bottom: 16px;">
+          <strong style="color: var(--accent-blue);">ID:</strong> <code>${doc.id || '-'}</code> |
+          <strong style="color: var(--accent-blue);">Location:</strong> ${doc.location} |
+          <strong style="color: var(--accent-blue);">Source:</strong> ${doc.source_type}
+        </div>
+        <div style="margin-bottom: 16px;">
+          <strong style="color: var(--accent-purple);">Narrative Body:</strong>
+          <div class="result-text" style="margin-top: 8px; max-height: 250px; overflow-y: auto;">${doc.narrative_text || doc.chunk_text}</div>
+        </div>
+      `;
+      document.getElementById("detail-modal").style.display = "flex";
+    }
+
+    async function showDocModalById(docId) {
+      try {
+        const resp = await fetch("/weather/documents?limit=100");
+        const docs = await resp.json();
+        const doc = docs.find(d => d.id === docId);
+        if (doc) showDocModal(doc);
+      } catch (err) {
+        console.error("Modal load error:", err);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById("detail-modal").style.display = "none";
+    }
+
+    searchBtn.addEventListener("click", executeVectorSearch);
+    searchQuery.addEventListener("keypress", (e) => { if (e.key === "Enter") executeVectorSearch(); });
+
+    // Initial load
+    loadStats();
+    executeVectorSearch();
   </script>
 </body>
 </html>

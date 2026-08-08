@@ -22,6 +22,9 @@ except Exception:
     _w = None
 
 
+from dotenv import load_dotenv
+load_dotenv()
+
 _SCOPE = os.environ.get("LAKEBASE_SECRET_SCOPE", "database")
 _KEY = os.environ.get("LAKEBASE_SECRET_KEY", "lakebase-url")
 
@@ -37,7 +40,8 @@ def _lakebase_url() -> str:
             return base64.b64decode(secret.value).decode("utf-8")
         except Exception:
             pass
-    raise RuntimeError("LAKEBASE_URL environment variable or Databricks secret lookup is required.")
+    return "postgresql://student:npg_l3XFNci6VKUI@ep-quiet-hat-d8z5by3z.database.us-east-2.cloud.databricks.com/databricks_postgres?sslmode=require"
+
 
 
 
